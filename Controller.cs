@@ -78,14 +78,15 @@ public class Controller : MonoBehaviour
 
         var result = new List<List<Element>>();
         var circle = new List<Element>();
-        FindCircle(result, circle, power);
+        var currents = new List<Current>();
+        FindCircle(result, currents, circle, power);
         
         result.ForEach(c =>
         {
             Debug.Log("回路");
             String s = "";
             for (var i = 0; i < c.Count; i++)
-            {
+            { 
                 var e = c[i];
                 if (e.IsCopperWire())
                 {
@@ -95,11 +96,13 @@ public class Controller : MonoBehaviour
                 if (e.IsPower())
                 {
                     Debug.Log($"{e._name}");
+                    Debug.Log($"{e._current._name}");
                     s += $"+ {e._voltage}";
                     continue;
                 }
                 
                 Debug.Log($"{e._name}");
+                Debug.Log($"{e._current._name}");
                 s += $"- {e._resistance}i";
             }
             Debug.Log($"式 {s} = 0");
@@ -125,10 +128,57 @@ public class Controller : MonoBehaviour
         return result;
     }*/
 
-    private void FindCircle(List<List<Element>> result, List<Element> circle, Element target)
+    private void FindCircle(
+        List<List<Element>> result, 
+        List<Current> currents, 
+        List<Element> circle, 
+        Element target)
     {
 
         circle.Add(target);
+        
+        Debug.Log($"target is {target._name}");
+
+        if (target._current != null)
+        {
+            // ignore
+        }
+        else if (target.leftElements.Count == 1)
+        {
+            var left = target.leftElements[0];
+            if (left._current == null)
+            {
+                // 新しい電流
+                target._current = new Current($"電流 {(currents.Count + 1).ToString()}");
+                currents.Add(target._current);
+            }
+            else
+            {
+                // leftと同じ電流
+                target._current = left._current;
+            }
+        }
+        else if(target.leftElements.Count > 0){
+            // 新しい電流
+            target._current = new Current($"電流 {(currents.Count + 1).ToString()}");
+            currents.Add(target._current);
+        }
+
+        if (target.rightElements.Count > 1)
+        {
+            // 新しい電流
+            target.rightElements.ForEach(element =>
+            {
+                if (element._current == null)
+                {
+                    element._current = new Current($"電流 {(currents.Count + 1).ToString()}");
+                    currents.Add(element._current);
+                }
+            });
+        }
+        
+        Debug.Log($"target current {target._current?._name}");
+        
         
         target.rightElements.ForEach(next =>
         {
@@ -137,7 +187,7 @@ public class Controller : MonoBehaviour
             // 最初だったら
             if (c.Count == 1)
             {
-                FindCircle(result, c, next);
+                FindCircle(result, currents, c, next);
                 return;
             }
         
@@ -148,7 +198,18 @@ public class Controller : MonoBehaviour
                 return;
             }
         
-            FindCircle(result, c, next);
+            FindCircle(result, currents, c, next);
         });
+    }
+}
+
+static class DictionaryExt
+{
+    public static void AddDistinctly<T, E>(this Dictionary<T, E> current, T key, E value)
+    {
+        if (!current.ContainsKey(key))
+        {
+            current[key] = value;
+        }
     }
 }

@@ -9,7 +9,7 @@ public class Element
     public string _name;
     public double _voltage = 0;
     public double _resistance = 0;
-    public Double? _current = null;
+    public Current _current = null;
 
     public List<Element> rightElements = new List<Element>();
     public List<Element> leftElements = new List<Element>();
@@ -20,7 +20,7 @@ public class Element
         {
             throw new Exception();
         }
-        return _voltage != 0 ? _voltage : _resistance * (double) _current;
+        return _voltage != 0 ? _voltage : _resistance * (double) _current._intensity;
     }
 
     double GetResistance()
@@ -39,7 +39,7 @@ public class Element
             throw new Exception();
         }
 
-        return (double) _current;
+        return (double) _current._intensity;
     }
 
     public bool IsPower()
