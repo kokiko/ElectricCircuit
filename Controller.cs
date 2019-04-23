@@ -11,6 +11,7 @@ public class Controller : MonoBehaviour
         var power = new Element();
         power._name = "電源";
         power._voltage = 1.5;
+        power.prev = power.left;
         
         var light1 = new Element();
         light1._name = "豆電球1";
@@ -42,39 +43,39 @@ public class Controller : MonoBehaviour
         copperWire7._name = "導線7";
         
         
-        power.rightElements.Add(copperWire1);
-        copperWire1.leftElements.Add(power);
+        power.right._connections.Add(copperWire1);
+        copperWire1.left._connections.Add(power);
 
         // 導線が分岐する
-        copperWire1.rightElements.Add(copperWire2);
-        copperWire2.leftElements.Add(copperWire1);
-        copperWire1.rightElements.Add(copperWire3);
-        copperWire3.leftElements.Add(copperWire1);
+        copperWire1.right._connections.Add(copperWire2);
+        copperWire2.left._connections.Add(copperWire1);
+        copperWire1.right._connections.Add(copperWire3);
+        copperWire3.left._connections.Add(copperWire1);
         
         // 分岐したそれぞれの導線に豆電球をつなぐ
-        copperWire2.rightElements.Add(light1);
-        light1.leftElements.Add(copperWire2);
-        light1.rightElements.Add(copperWire4);
-        copperWire4.leftElements.Add(light1);
+        copperWire2.right._connections.Add(light1);
+        light1.left._connections.Add(copperWire2);
+        light1.right._connections.Add(copperWire4);
+        copperWire4.left._connections.Add(light1);
         
-        copperWire3.rightElements.Add(light2);
-        light2.leftElements.Add(copperWire3);
-        light2.rightElements.Add(copperWire5);
-        copperWire5.leftElements.Add(light2);
+        copperWire3.right._connections.Add(light2);
+        light2.left._connections.Add(copperWire3);
+        light2.right._connections.Add(copperWire5);
+        copperWire5.left._connections.Add(light2);
         
         // 分岐した導線が合流する
-        copperWire4.rightElements.Add(copperWire6);
-        copperWire6.leftElements.Add(copperWire4);
-        copperWire5.rightElements.Add(copperWire6);
-        copperWire6.leftElements.Add(copperWire5);
+        copperWire4.right._connections.Add(copperWire6);
+        copperWire6.left._connections.Add(copperWire4);
+        copperWire5.right._connections.Add(copperWire6);
+        copperWire6.left._connections.Add(copperWire5);
         
         // 合流した導線が電源に戻る
-        copperWire6.rightElements.Add(power);
-        power.leftElements.Add(copperWire6);
+        copperWire6.right._connections.Add(power);
+        power.left._connections.Add(copperWire6);
         
         // 合流した導線に余計なヒゲを生やす
-        copperWire6.rightElements.Add(copperWire7);
-        copperWire7.leftElements.Add(copperWire6);
+        copperWire6.right._connections.Add(copperWire7);
+        copperWire7.left._connections.Add(copperWire6);
 
         var result = new List<List<Element>>();
         var circle = new List<Element>();
@@ -109,25 +110,6 @@ public class Controller : MonoBehaviour
         });
     }
 
-/*    private List<Element> FindCircle(Element entry)
-    {
-        var result = new List<Element>();
-        
-        Element target = entry;
-        do
-        {
-            result.Add(target);
-            target = target.rightElements[0];
-        } while (target != entry);
-
-        result.ForEach(element =>
-        {
-            Debug.Log($"{element._name}");
-        });
-        
-        return result;
-    }*/
-
     private void FindCircle(
         List<List<Element>> result, 
         List<Current> currents, 
@@ -143,10 +125,10 @@ public class Controller : MonoBehaviour
         {
             // ignore
         }
-        else if (target.leftElements.Count == 1)
+        else if (target.prev._connections.Count == 1)
         {
-            var left = target.leftElements[0];
-            if (left._current == null)
+            var prev = target.prev._connections[0];
+            if (prev._current == null)
             {
                 // 新しい電流
                 target._current = new Current($"電流 {(currents.Count + 1).ToString()}");
@@ -155,32 +137,33 @@ public class Controller : MonoBehaviour
             else
             {
                 // leftと同じ電流
-                target._current = left._current;
+                target._current = prev._current;
             }
         }
-        else if(target.leftElements.Count > 0){
+        else if(target.prev._connections.Count > 0){
             // 新しい電流
             target._current = new Current($"電流 {(currents.Count + 1).ToString()}");
             currents.Add(target._current);
         }
-
-        if (target.rightElements.Count > 1)
+        
+        // 新しい電流
+        target.next._connections.ForEach(nextElement =>
         {
-            // 新しい電流
-            target.rightElements.ForEach(element =>
+            nextElement.SetPrev(target);
+            if (target.next._connections.Count > 1)
             {
-                if (element._current == null)
+                if (nextElement._current == null)
                 {
-                    element._current = new Current($"電流 {(currents.Count + 1).ToString()}");
-                    currents.Add(element._current);
+                    nextElement._current = new Current($"電流 {(currents.Count + 1).ToString()}");
+                    currents.Add(nextElement._current);
                 }
-            });
-        }
+            }
+        });
         
         Debug.Log($"target current {target._current?._name}");
         
         
-        target.rightElements.ForEach(next =>
+        target.next._connections.ForEach(next =>
         {
             var c = new List<Element>(circle);
             

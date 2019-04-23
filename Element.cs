@@ -6,13 +6,62 @@ using UnityEngine;
 
 public class Element
 {
+    public class Terminal
+    {
+        public List<Element> _connections = new List<Element>();
+    }
+    
+    
     public string _name;
     public double _voltage = 0;
     public double _resistance = 0;
     public Current _current = null;
+    
+    public Terminal right = new Terminal();
+    public Terminal left = new Terminal();
 
-    public List<Element> rightElements = new List<Element>();
-    public List<Element> leftElements = new List<Element>();
+
+    public Terminal prev { get; /*private*/ set; }
+
+    public Terminal next
+    {
+        get
+        {
+            if (prev == null)
+            {
+                return null;
+            }
+
+            return right.Equals(prev) ? left : right;
+        }
+        private set{}
+    }
+
+    public void SetPrev(Element prevConnection)
+    {
+        if (right._connections.Contains(prevConnection))
+        {
+            if (left._connections.Contains(prevConnection))
+            {
+                throw new Exception("参照関係がおかしい");
+            }
+
+            prev = right;
+            return;
+        }
+
+        if (left._connections.Contains(prevConnection))
+        {
+            if (right._connections.Contains(prevConnection))
+            {
+                throw new Exception("参照関係がおかしい");
+            }
+            prev = left;
+            return;
+        }
+        
+        throw new Exception("参照関係がおかしい");
+    }
 
     double GetVoltage()
     {
