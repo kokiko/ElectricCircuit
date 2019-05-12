@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
+using UnityEditor;
 
 public class Controller : MonoBehaviour
 {
@@ -77,50 +79,126 @@ public class Controller : MonoBehaviour
         copperWire6.right._connections.Add(copperWire7);
         copperWire7.left._connections.Add(copperWire6);
 
-        var result = new List<List<Element>>();
-        var circle = new List<Element>();
+        var circles = new List<List<Element>>();
+        var circuitElements = new List<Element>();
         var currents = new List<Current>();
-        FindCircle(result, currents, circle, power);
-        
-        result.ForEach(c =>
-        {
-            Debug.Log("回路");
-            String s = "";
-            for (var i = 0; i < c.Count; i++)
-            { 
-                var e = c[i];
-                if (e.IsCopperWire())
-                {
-                    continue;
-                }
+        FindCircle(circles, currents, circuitElements, power, null);
 
-                if (e.IsPower())
-                {
-                    Debug.Log($"{e._name}");
-                    Debug.Log($"{e._current._name}");
-                    s += $"+ {e._voltage}";
-                    continue;
-                }
-                
-                Debug.Log($"{e._name}");
-                Debug.Log($"{e._current._name}");
-                s += $"- {e._resistance}i";
-            }
-            Debug.Log($"式 {s} = 0");
-        });
+        RemoveUnnecessaryCurrents(circles, currents);
+        
+        double[,] matrix = CreateMatrix(circles, currents, circuitElements);
+        
+        var b = new double[] {1.5, 1.5, 0};
+        var dimension = 3;
+        var solution = new double[dimension];
+        GaussianEliminationCalculator.Calculate(matrix, b, dimension, solution);
+        
+        for (int i = 0; i < solution.Length; i++)
+        {
+            currents[i]._intensity = solution[i];
+            Debug.Log(currents[i]._name + " = " + solution[i]);
+        }
     }
 
+    /// <summary>
+    /// 
+    /// </summary>
+    /// <param name="circles">回路のリスト</param>
+    /// <param name="currents">全電流</param>
+    /// <returns></returns>
+    private double[,] CreateMatrix(List<List<Element>> circles, List<Current> currents, List<Element> circuitElements
+    )
+    {
+        var rank = Math.Max(currents.Count, circles.Count);
+        double[,] matrix = new double[rank, rank];
+
+        // r1-i1 r1-i2 r1-i3
+        // r2-i1 r2-i2 r2-i3
+        // r3-i1 r3-i2 r3-i3
+        for(var i = 0; i < currents.Count; i++) // 列ごとに
+        {
+            var current = currents[i];
+            for(var k = 0; k < circles.Count; k++) // 行ごと
+            {
+                matrix[k,i] = circles[k]
+                    .Where(e => current.Equals(e._current) && !e.IsPower())
+                    .Select(e => e.GetResistance())
+                    .Sum();
+            }
+        }
+        
+        var diff = Math.Abs(currents.Count - circles.Count);
+
+        List<Element> branchElements = circuitElements
+            .Where(e =>
+            {
+                return e.next._connections
+                           .Where(next => { return currents.IndexOf(next._current) >= 0; })
+                           .Count() > 1;
+            }).ToList();
+        
+        branchElements.ForEach(e =>
+        {
+            var row = rank - diff++;
+            matrix[row, currents.IndexOf(e._current)] = -1;
+            e.next._connections.ForEach(next =>
+            {
+                var currentIndex = currents.IndexOf(next._current);
+                if (currentIndex >= 0)
+                {
+                    Debug.Log($"row: {row.ToString()}, column: {currentIndex.ToString()}");
+                    matrix[row, currentIndex] = 1;
+                }
+            });
+        });
+      
+        for(var r = 0; r < currents.Count; r++){
+            string row = "";
+            for(var c = 0; c < currents.Count; c++){
+                row += $" {matrix[r,c]}";
+            }
+            Debug.Log(row);
+        }
+
+        return matrix;
+    }
+
+    private void RemoveUnnecessaryCurrents(List<List<Element>> circles, List<Current> currents)
+    {
+        var unnecessaryCurrents = new List<Current>(currents);
+        circles.ForEach(circle =>
+        {
+            circle.ForEach(element => { unnecessaryCurrents.Remove(element._current); });
+        });
+        
+        unnecessaryCurrents.ForEach(current => { currents.Remove(current); });
+    }
+
+    /// <summary>
+    ///
+    /// 
+    /// </summary>
+    /// <param name="result">回路の構成要素をもつリストのリスト</param>
+    /// <param name="currents">電流を入れるリスト</param>
+    /// <param name="circuitElements">全回路の構成要素を入れるリスト</param>
+    /// <param name="target">探っていく要素</param>
+    /// <param name="circle">対象の循環</param>
     private void FindCircle(
         List<List<Element>> result, 
         List<Current> currents, 
-        List<Element> circle, 
-        Element target)
+        List<Element> circuitElements, 
+        Element target,
+        List<Element> circle)
     {
 
-        circle.Add(target);
-        
-        Debug.Log($"target is {target._name}");
+        if (circle == null)
+        {
+            circle = new List<Element>();
+        }
 
+        circle.Add(target);
+        circuitElements.Add(target);
+        
         if (target._current != null)
         {
             // ignore
@@ -131,7 +209,6 @@ public class Controller : MonoBehaviour
             if (prev._current == null)
             {
                 // 新しい電流
-                target._current = new Current($"電流 {(currents.Count + 1).ToString()}");
                 currents.Add(target._current);
             }
             else
@@ -159,18 +236,17 @@ public class Controller : MonoBehaviour
                 }
             }
         });
-        
-        Debug.Log($"target current {target._current?._name}");
-        
-        
-        target.next._connections.ForEach(next =>
+
+        for (var i = 0; i < target.next._connections.Count; i++)
         {
+            var next = target.next._connections[i];
+            
             var c = new List<Element>(circle);
             
             // 最初だったら
             if (c.Count == 1)
             {
-                FindCircle(result, currents, c, next);
+                FindCircle(result, currents, circuitElements, next, c);
                 return;
             }
         
@@ -178,10 +254,27 @@ public class Controller : MonoBehaviour
             if (c[0] == next)
             {
                 result.Add(c);
-                return;
+                if (!c.First()._current.Equals(c.Last()._current))
+                {
+                    var duplicatedCurrent = c.Last()._current;
+                    ReplaceCurrent(c, duplicatedCurrent, c.First()._current);
+                    currents.Remove(duplicatedCurrent);
+                }
+                continue;
             }
         
-            FindCircle(result, currents, c, next);
+            FindCircle(result, currents, circuitElements, next, c);
+        }
+    }
+
+    private void ReplaceCurrent(List<Element> circle, Current from, Current to)
+    {
+        circle.ForEach(element =>
+        {
+            if (from.Equals(element._current))
+            {
+                element._current = to;
+            }
         });
     }
 }

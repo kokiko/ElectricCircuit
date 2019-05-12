@@ -72,7 +72,7 @@ public class Element
         return _voltage != 0 ? _voltage : _resistance * (double) _current._intensity;
     }
 
-    double GetResistance()
+    public double GetResistance()
     {
         if (IsPower())
         {
