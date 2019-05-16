@@ -253,24 +253,7 @@ public class CircuitAnalyzer : MonoBehaviour
                 circuitInfo = SearchCircuit(next, circuitInfo, c);
             }
         }
-
-        /*if (circuitInfo.Circles.Count == 0)
-        {
-            throw new Exception("回路になっていない！！");
-        }
-
-        bool hasPower = circuitInfo.Circles.Any(c => c.Any(e => e.IsPower()));
-        if (!hasPower)
-        {
-            throw new Exception("電池がない！！");
-        }
-
-        bool hasResistance = circuitInfo.Circles.Any(c => c.Any(e => e._resistance > 0));
-        if (!hasResistance)
-        {
-            throw new Exception("抵抗がない（ショート回路）！！");
-        }*/
-
+        
         return circuitInfo;
     }
 
