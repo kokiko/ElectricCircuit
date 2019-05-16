@@ -9,6 +9,23 @@ public class CircuitAnalyzer : MonoBehaviour
     {
         var circuitInfo = SearchCircuit(entryPoint, null, null);
 
+        if (circuitInfo.Circles.Count == 0)
+        {
+            throw new Exception("回路になっていない！！");
+        }
+
+        bool hasPower = circuitInfo.Circles.Any(c => c.Any(e => e.IsPower()));
+        if (!hasPower)
+        {
+            throw new Exception("電池がない！！");
+        }
+
+        bool hasResistance = circuitInfo.Circles.Any(c => c.Any(e => e._resistance > 0));
+        if (!hasResistance)
+        {
+            throw new Exception("抵抗がない（ショート回路）！！");
+        }
+
         var currents = RemoveUnnecessaryCurrents(circuitInfo.Circles, circuitInfo.Currents);
 
         Formula formula = CreateFormula(circuitInfo.Circles, currents, circuitInfo.Elements);
@@ -203,6 +220,8 @@ public class CircuitAnalyzer : MonoBehaviour
             }
         });
 
+        // next の要素のうちどれかが circle[0] と一致していれば戻ってきたフラグを立てる
+        var gonAround = target.next._connections.Any(next => circle.Count > 1 && circle[0].Equals(next));
         for (var i = 0; i < target.next._connections.Count; i++)
         {
             var next = target.next._connections[i];
@@ -229,10 +248,13 @@ public class CircuitAnalyzer : MonoBehaviour
                 continue;
             }
 
-            circuitInfo = SearchCircuit(next, circuitInfo, c);
+            if (!gonAround)
+            {
+                circuitInfo = SearchCircuit(next, circuitInfo, c);
+            }
         }
 
-        if (circuitInfo.Circles.Count == 0)
+        /*if (circuitInfo.Circles.Count == 0)
         {
             throw new Exception("回路になっていない！！");
         }
@@ -247,7 +269,7 @@ public class CircuitAnalyzer : MonoBehaviour
         if (!hasResistance)
         {
             throw new Exception("抵抗がない（ショート回路）！！");
-        }
+        }*/
 
         return circuitInfo;
     }
