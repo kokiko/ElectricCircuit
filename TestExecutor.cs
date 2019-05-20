@@ -14,7 +14,6 @@ public class TestExecutor : MonoBehaviour
         var power = new Element();
         power._name = "電源";
         power._voltage = 1.5;
-        //power.prev = power.left;
 
         var light1 = new Element();
         light1._name = "豆電球1";
@@ -88,7 +87,6 @@ public class TestExecutor : MonoBehaviour
         var power1 = new Element();
         power1._name = "電源1";
         power1._voltage = 1.5;
-        //power1.prev = power1.left;
 
         var power2 = new Element();
         power2._name = "電源2";
