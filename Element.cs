@@ -116,11 +116,6 @@ public class Element
 
     public double GetResistance()
     {
-        if (IsPower())
-        {
-            throw new Exception();
-        }
-
         return _resistance;
     }
 
