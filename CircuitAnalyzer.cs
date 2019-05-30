@@ -23,13 +23,33 @@ public class CircuitAnalyzer : MonoBehaviour
             throw new Exception("電池がない！！");
         }
 
-        bool hasResistance = Enumerable.Any(circuitInfo.Circles, c => Enumerable.Any(c, e => e._resistance > 0));
-        if (!hasResistance)
+        bool isShortCircuit = circuitInfo.Circles.Any(circle =>
         {
-            throw new Exception("抵抗がない（ショート回路）！！");
+            var power = 0D;
+            var hasResistance = false;
+            foreach (var element in circle)
+            {
+                if (element.IsPower())
+                {
+                    power += element.Next.Equals(element.right)
+                        ? element._voltage
+                        : -element._voltage;
+                }
+                else
+                {
+                    hasResistance |= element._resistance > 0;
+                }
+            }
+
+            // 回路に電圧があり、抵抗がなければショート回路
+            return power > 0 && !hasResistance;
+        });
+        if (isShortCircuit)
+        {
+            throw new Exception("ショート回路！！");
         }
 
-        var circles = RemoveUnnecessaryCircles(circuitInfo.Circles);
+        var circles = circuitInfo.Circles;
         var currents = RemoveUnnecessaryCurrents(circles, circuitInfo.Currents);
 
         // 立式
@@ -61,15 +81,16 @@ public class CircuitAnalyzer : MonoBehaviour
 
         var vector = new double[dimension];
 
-        // 電流の立式（キルヒホッフ第2）
+        // 電圧の立式（キルヒホッフ第2）
         for (var i = 0; i < currents.Count; i++) // 列ごとに
         {
             var current = currents[i];
             for (var row = 0; row < circles.Count; row++) // 行ごと
             {
                 matrix[row, i] = Enumerable.Sum(Enumerable.Select(
-                    Enumerable.Where(circles[row], e => current.Equals(e.Current) && !e.IsPower()),
+                    Enumerable.Where(circles[row], e => current.Equals(e.Current)),
                     e => e.GetResistance()));
+
 
                 vector[row] = Enumerable.Sum(Enumerable.Select(Enumerable.Where(circles[row], e => e.IsPower()),
                     e => e._voltage * (e.Prev.Equals(e.left) ? 1 : -1)));
@@ -142,14 +163,6 @@ public class CircuitAnalyzer : MonoBehaviour
             Matrix = matrix;
             ConstVector = constVector;
         }
-    }
-
-    /// <summary>
-    /// 不要な電流を削除した電流リストを返す
-    /// </summary>
-    private static List<List<Element>> RemoveUnnecessaryCircles(List<List<Element>> circles)
-    {
-        return circles.Where(circle => circle.Any(element => element._resistance > 0)).ToList();
     }
 
     /// <summary>
@@ -260,7 +273,8 @@ public class CircuitAnalyzer : MonoBehaviour
             // 最初だったら
             if (c.Count == 1)
             {
-                return SearchCircuit(next, circuitInfo, c);
+                circuitInfo = SearchCircuit(next, circuitInfo, c);
+                continue;
             }
 
             // 戻ってきたら
@@ -270,7 +284,8 @@ public class CircuitAnalyzer : MonoBehaviour
                 if (c[0] == next)
                 {
                     circuitInfo.Circles.Add(c);
-                    if (!c.First().GetSearchParam().current.Equals(c.Last().GetSearchParam().current))
+                    if (!c.First().GetSearchParam().current.Equals(c.Last().GetSearchParam().current)
+                        && c.First().GetSearchParam().GetPrev()._connections.Count == 1)
                     {
                         var duplicatedCurrent = c.Last().GetSearchParam().current;
                         ReplaceCurrent(c, duplicatedCurrent, c.First().GetSearchParam().current);
