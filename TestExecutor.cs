@@ -5,7 +5,7 @@ public class TestExecutor : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        var entryPoint = CreateCircuit2();
+        var entryPoint = CreateCircuit3();
         CircuitAnalyzer.AnalyzeCircuit(entryPoint);
     }
 
@@ -14,6 +14,7 @@ public class TestExecutor : MonoBehaviour
         var power = new Element();
         power._name = "電源";
         power._voltage = 1.5;
+        power._resistance = 1;
 
         var light1 = new Element();
         light1._name = "豆電球1";
@@ -87,10 +88,12 @@ public class TestExecutor : MonoBehaviour
         var power1 = new Element();
         power1._name = "電源1";
         power1._voltage = 1.5;
+        power1._resistance = 1;
 
         var power2 = new Element();
         power2._name = "電源2";
         power2._voltage = 1.5;
+        power2._resistance = 1;
 
         var light1 = new Element();
         light1._name = "豆電球1";
@@ -163,6 +166,63 @@ public class TestExecutor : MonoBehaviour
 
         copperWire9.right._connections.Add(power2);
         power2.left._connections.Add(copperWire9);
+
+        return power1;
+    }
+
+    private Element CreateCircuit3()
+    {
+        var power1 = new Element();
+        power1._name = "電源1";
+        power1._voltage = 1.5;
+        power1._resistance = 1;
+
+        var power2 = new Element();
+        power2._name = "電源2";
+        power2._voltage = 1.5;
+        power2._resistance = 1;
+
+        var light1 = new Element();
+        light1._name = "豆電球1";
+        light1._resistance = 7.5;
+
+        var copperWire1 = new Element();
+        copperWire1._name = "導線1";
+
+        var copperWire2 = new Element();
+        copperWire2._name = "導線2";
+
+        var copperWire3 = new Element();
+        copperWire3._name = "導線3";
+
+        var copperWire4 = new Element();
+        copperWire4._name = "導線4";
+
+
+        power1.right._connections.Add(copperWire1);
+        copperWire1.left._connections.Add(power1);
+
+        copperWire1.right._connections.Add(light1);
+        light1.left._connections.Add(copperWire1);
+
+        light1.right._connections.Add(copperWire2);
+        copperWire2.left._connections.Add(light1);
+
+        copperWire2.right._connections.Add(power1);
+        power1.left._connections.Add(copperWire2);
+
+
+        power1.right._connections.Add(copperWire3);
+        copperWire3.left._connections.Add(power1);
+
+        copperWire3.right._connections.Add(power2);
+        power2.right._connections.Add(copperWire3);
+
+        power2.left._connections.Add(copperWire4);
+        copperWire4.left._connections.Add(power2);
+
+        copperWire4.right._connections.Add(power1);
+        power1.left._connections.Add(copperWire4);
 
         return power1;
     }
