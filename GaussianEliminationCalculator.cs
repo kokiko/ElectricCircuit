@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using System.Linq;
 using UnityEngine;
 
@@ -8,48 +6,20 @@ public class GaussianEliminationCalculator : MonoBehaviour
 {
     public static void Calculate(double[,] matrix, double[] vector, int dimension, double[] solution)
     {
-        pivot(matrix, vector, dimension);
         Forwardeliminate(matrix, vector, dimension);
         BackwardSubstitute(matrix, vector, dimension, solution);
         Debug.Log(string.Join("\n", solution.Select(x => $"{x,8:F4}")));
-
-    }
-
-    private static void pivot(double[,] matrix, double[] vector, int dimension)
-    {
-        for (var p = 0; p < dimension; p++)
-        {
-            int maxRow = p;
-            double maxValue = 0;
-            for (var row = p; row < dimension; row++)
-            {
-                if (Math.Abs(matrix[row, p]) > maxValue)
-                {
-                    maxValue = Math.Abs(matrix[row, p]);
-                    maxRow = row;
-                }
-            }
-
-            if (maxRow != p)
-            {
-                double tmp;
-                for (var col = 0; col < dimension; col++)
-                {
-                    tmp = matrix[maxRow, col];
-                    matrix[maxRow, col] = matrix[p, col];
-                    matrix[p, col] = tmp;
-                }
-                tmp = vector[maxRow];
-                vector[maxRow] = vector[p];
-                vector[p] = tmp;
-            }
-        }
     }
     
     private static void Forwardeliminate(double[,] matrix, double[] vector, int dimension)
     {
         for (int i = 0; i < dimension - 1; i++)
         {
+            // ピボットが0なら行を入れ替える
+            if (matrix[i, i] == 0)
+            {
+                PartialPivoting(matrix, vector, i, dimension);
+            }
             for (int j = i + 1; j < dimension; j++)
             {
                 var s = matrix[j, i] / matrix[i, i];
@@ -59,6 +29,36 @@ public class GaussianEliminationCalculator : MonoBehaviour
                 }
                 vector[j] -= vector[i] * s;
             }
+        }
+    }
+
+    private static void PartialPivoting(double[,] matrix, double[] vector, int pivotIndex, int dimension)
+    {
+        var maxRow = pivotIndex;
+        for (int i = pivotIndex; i < dimension; i++)
+        {
+            if (Math.Abs(matrix[i, pivotIndex]) > Math.Abs(matrix[maxRow, pivotIndex]))
+            {
+                maxRow = i;
+            }
+        }
+
+        if (maxRow != pivotIndex)
+        {
+            double tmp;
+            for (var j = pivotIndex; j < dimension; j++ )
+            {
+                tmp = matrix[maxRow, j];
+                matrix[maxRow, j] = matrix[pivotIndex, j];
+                matrix[pivotIndex, j] = tmp;
+            }
+            tmp = vector[maxRow];
+            vector[maxRow] = vector[pivotIndex];
+            vector[pivotIndex] = tmp;
+        }
+        else
+        {
+            Debug.Log("could not partial pivoting.");
         }
     }
     
